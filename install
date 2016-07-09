@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Enable script to resolve it's base directory regardless
+# where it is run from
+# Resolve the path to the source directory for the script
+# including resolving symlinks to get to the true source
+SOURCE="${BASH_SOURCE[0]}"
+# resolve $SOURCE until the file is no longer a symlink
+while [ -h "${SOURCE}" ]; do
+  DIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
+  SOURCE="$(readlink "${SOURCE}")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
+done
+# DIR is the resolved path
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# Remove the .lockfile if it exists
+rm -f $DIR/.lockfile
+
+# Loop over files in locker directory and
+# copy them to the user's home directory
+for dotfile in $DIR/locker/.[^.]*; do
+  cp $dotfile $HOME/
+  echo $(basename $dotfile) >> $DIR/.lockfile
+done
