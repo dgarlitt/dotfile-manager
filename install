@@ -22,6 +22,7 @@ rm -f $DIR/.lockfile
 # Loop over files in locker directory and
 # copy them to the user's home directory
 for dotfile in $DIR/locker/.[^.]*; do
+  echo "Installing $(basename $dotfile) into $HOME"
   cp $dotfile $HOME/
   echo $(basename $dotfile) >> $DIR/.lockfile
 done
