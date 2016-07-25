@@ -16,8 +16,8 @@ done
 # DIR is the resolved path
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-# Loop over files in locker directory and
-# copy them to the user's home directory
+# loop over files listed in .lockfile and copy them from
+# the user's home directory into the locker directory
 while read dotfile; do
   echo "Updating $dotfile in $DIR/locker/"
   cp $HOME/$dotfile $DIR/locker/
