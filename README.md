@@ -1,54 +1,55 @@
-# Dotfile manager
+# Dotfile Manager
 
-## Usage
+## Installation
 
-Fork this repository (https://github.com/dgarlitt/dotfile-manager)
-and clone it onto your machine. For the sake of this README,
-I am assuming that you cloned it into `~/.dotfile-manager`
+Clone this repository (https://github.com/dgarlitt/dotfile-manager) into a directory on your machine (example: $HOME/.dotfile_manager).
 
-### Update your repo
 
-#### Update the .lockfile
+Now run the `bin/setup` script.
 
-Edit the `.lockfile` to contain the list of files you want
-to keep track of for your dotfiles repo
 
-#### Run the update script
+You will be prompted to optionally create a new git origin remote for the repository. The current origin will be renamed to upstream.
 
-Run the `update` script to copy the dotfiles specified in
-the `.lockfile` from your home directory into the
-`locker` directory.
+
+Upon completion, an empty `.lockfile` will be created as well as an empty `locker` directory. A symbolic link to the `./bin/run` script will be placed in `/usr/local/bin` named `dotfile_manager`.
+
+
+Assuming `/usr/local/bin` is on your `$PATH`, you can type the following command to see the usage message: 
 
 ```
-~/.dotfile-manager/update
+dotfile_manager -h
 ```
 
-#### Commit and Push your dotfiles
+## Backup Your Files
 
-Please, be careful not to add dotfiles containing sensitive
-unless you plan on pushing this to a private repository.
+Edit the `.lockfile` to contain the list of files in your `$HOME` directory that you want to keep track of for your dotfiles repo.
 
-```
-cd ~/.dotfile-manager
-git add -A
-git commit -m "Updated my dotfiles"
-git push origin master
-```
 
-### Install Your Dotfiles On A New Machine
-
-#### Clone Your Fork
+Once your `.lockfile` is edited, run the following command to backup your files:
 
 ```
-git clone git@github.com:you/your-fork.git ~/.dotfile-manager
+dotfile_manager -b
 ```
 
-### Run the Installer
+Your files will be backed up to the `locker` directory.
 
-Run the `install` script to copy the dotfiles from the `locker`
-directory to your home directory.
+
+At this point you can commit and push your dotfiles to your personal repository.
+
+
+*BE CAREFUL NOT TO ADD FILES CONTAINING SENSITIVE INFORMATION UNLESS YOU PLAN ON PUSHING THEM TO A PRIVATE REPOSITORY.*
+
+
+## Restore Your Files
+
+To restore your files, simply run the following command:
+
 
 ```
-~/.dotfile-manager/install
+dotfile_manager -r
 ```
 
+This will copy the files listed in the `.lockfile` and located in the `locker` into your `$HOME` directory.
+
+
+*NOTE: If you are restoring them to a new machine, clone your personal repo to the new machine and follow the Installation instructions at the top of this file first.*

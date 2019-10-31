@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# ==========================================================
+# Enable script to resolve it's base directory regardless
+# where it is run from
+# Resolve the path to the source directory for the script
+# including resolving symlinks to get to the true source
+SOURCE="${BASH_SOURCE[0]}"
+
+# resolve $SOURCE until the file is no longer a symlink
+while [ -h "${SOURCE}" ]; do
+  DIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
+  SOURCE="$(readlink "${SOURCE}")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
+done
+
+# CURRENT_DIR is the resolved path to the directory
+# in which this file resides.
+CURRENT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+# ==========================================================
+
+
+DOTFILE_MANAGER_BIN_DIR=$CURRENT_DIR
+DOTFILE_MANAGER_DIR=${CURRENT_DIR%/bin}
+LOCKFILE="${DOTFILE_MANAGER_DIR}/.lockfile"
+LOCKER="${DOTFILE_MANAGER_DIR}/locker"
+
+if [ -f "$LOCKFILE" ] ||  [ -d "$LOCKER" ]; then
+    echo "The .lockfile and/or locker in ${DOTFILE_MANAGER_DIR} will be deleted."
+    read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+fi
+
+ERROR=false
+
+rm -rf $HOME/${TEST_PREFIX}_dot*
+
+TEST_PREFIX=".test_unnecessary"
+
+rm -f $LOCKFILE
+echo "${TEST_PREFIX}_dotfile" > $LOCKFILE
+echo "${TEST_PREFIX}_dotdir" >> $LOCKFILE
+
+rm -rf $LOCKER/*
+mkdir -p $LOCKER/${TEST_PREFIX}_dotdir/foo
+mkdir -p $LOCKER/${TEST_PREFIX}_dotdir/bar
+echo "fake dotfile" > $LOCKER/${TEST_PREFIX}_dotfile
+echo "root" > $LOCKER/${TEST_PREFIX}_dotdir/rootfile
+echo "foo" > $LOCKER/${TEST_PREFIX}_dotdir/foo/foofile
+echo "bar" > $LOCKER/${TEST_PREFIX}_dotdir/bar/barfile
+
+${DOTFILE_MANAGER_BIN_DIR}/run -r
+
+[ ! -f "$HOME/${TEST_PREFIX}_dotfile" ] && echo "$HOME/${TEST_PREFIX}_dotfile was not created" && ERROR=true
+[ ! -f "$HOME/${TEST_PREFIX}_dotdir/rootfile" ] && echo "$HOME/${TEST_PREFIX}_dotdir/rootfile was not created" && ERROR=true
+[ ! -f "$HOME/${TEST_PREFIX}_dotdir/foo/foofile" ] && echo "$HOME/${TEST_PREFIX}_dotdir/foo/foofile was not created" && ERROR=true
+[ ! -f "$HOME/${TEST_PREFIX}_dotdir/bar/barfile" ] && echo "$HOME/${TEST_PREFIX}_dotdir/bar/barfile was not created" && ERROR=true
+[ "$ERROR" = true ] && exit 1
+
+echo "more" >> $HOME/${TEST_PREFIX}_dotfile
+echo "more" >> $HOME/${TEST_PREFIX}_dotdir/rootfile
+echo "more" >> $HOME/${TEST_PREFIX}_dotdir/foo/foofile
+echo "more" >> $HOME/${TEST_PREFIX}_dotdir/bar/barfile
+
+${DOTFILE_MANAGER_BIN_DIR}/run -b
+
+function test_line_count() {
+    local expected=2
+    local file=$1
+    local line_count=$(wc -l < "$file")
+    [ $expected -gt $line_count ] && echo "$file had incorrect line count" && ERROR=true
+}
+
+test_line_count "$LOCKER/${TEST_PREFIX}_dotfile"
+test_line_count "$LOCKER/${TEST_PREFIX}_dotdir/rootfile"
+test_line_count "$LOCKER/${TEST_PREFIX}_dotdir/foo/foofile"
+test_line_count "$LOCKER/${TEST_PREFIX}_dotdir/bar/barfile"
+
+rm -rf $HOME/${TEST_PREFIX}_dot*
+rm $LOCKFILE
+rm -rf $LOCKER
+
+touch $LOCKFILE
+mkdir -p $LOCKER
