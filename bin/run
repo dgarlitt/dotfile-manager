@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# ==========================================================
+# Enable script to resolve it's base directory regardless
+# where it is run from
+# Resolve the path to the source directory for the script
+# including resolving symlinks to get to the true source
+SOURCE="${BASH_SOURCE[0]}"
+
+# resolve $SOURCE until the file is no longer a symlink
+while [ -h "${SOURCE}" ]; do
+  DIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
+  SOURCE="$(readlink "${SOURCE}")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
+done
+
+# CURRENT_DIR is the resolved path to the directory
+# in which this file resides.
+CURRENT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+# ==========================================================
+
+DOTFILE_MANAGER_BIN_DIR=$CURRENT_DIR
+DOTFILE_MANAGER_DIR=${CURRENT_DIR%/bin}
+DOTFILE_MANAGER_LOCKFILE=$DOTFILE_MANAGER_DIR/.lockfile
+DOTFILE_MANAGER_LOCKER=$DOTFILE_MANAGER_DIR/locker
+
+
+function copy_file_or_directory {
+  local dotfile=$1
+  local source=$2
+  local dest=$3
+
+  if [ -d "$source/$dotfile" ]; then
+      cp -R $source/$dotfile $dest/
+    else
+      cp $source/$dotfile $dest/$dotfile
+    fi
+}
+
+function read_lockfile() {
+  local action=$1
+  local source=$2
+  local dest=$3
+
+  while read dotfile || [ -n "$dotfile" ]; do
+    if [ ! -z "$dotfile" ]; then
+      if [ -f "$source/$dotfile" ] || [ -d "$source/$dotfile" ]; then
+        echo "$action $source/$dotfile"
+        echo "  to $dest/$dotfile"
+        copy_file_or_directory $dotfile $source $dest
+      fi
+    fi
+  done < $DOTFILE_MANAGER_LOCKFILE
+}
+
+function backup() {
+  rm -rf $DOTFILE_MANAGER_LOCKER/*
+  read_lockfile "Backing up" $HOME $DOTFILE_MANAGER_LOCKER
+}
+
+function restore() {
+  read_lockfile "Restoring" $DOTFILE_MANAGER_LOCKER $HOME
+}
+
+function usage() {
+  echo "Usage: run [-b] [-i] [-s] [-h]"
+  echo ""
+  echo "Backup dot files listed in the .lockfile:"
+  echo "    ./run -b"
+  echo ""
+  echo "Restore backed up dot files listed in .lockfile"
+  echo "into user's \$HOME directory:"
+  echo "    ./run -r"
+  echo ""
+  echo "This usage message:"
+  echo "    ./run -h"
+  exit 1;
+}
+
+[ -z "$1" ] && usage
+
+while getopts 'bhr' opt ; do
+  case "$opt" in 
+  b) backup ;; 
+  h) usage ;; 
+  r) restore ;;
+  ?) usage ;;
+  esac 
+done 
+shift $(( OPTIND - 1 ))
+
+exit;

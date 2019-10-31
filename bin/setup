@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# ==========================================================
+# Enable script to resolve it's base directory regardless
+# where it is run from
+# Resolve the path to the source directory for the script
+# including resolving symlinks to get to the true source
+SOURCE="${BASH_SOURCE[0]}"
+
+# resolve $SOURCE until the file is no longer a symlink
+while [ -h "${SOURCE}" ]; do
+  DIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
+  SOURCE="$(readlink "${SOURCE}")"
+  # if $SOURCE was a relative symlink, we need to resolve it
+  # relative to the path where the symlink file was located
+  [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
+done
+
+# CURRENT_DIR is the resolved path to the directory
+# in which this file resides.
+CURRENT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+# ==========================================================
+
+DOTFILE_MANAGER_BIN_DIR=$CURRENT_DIR
+DOTFILE_MANAGER_DIR=${CURRENT_DIR%/bin}
+DOTFILE_MANAGER_LOCKFILE=$DOTFILE_MANAGER_DIR/.lockfile
+DOTFILE_MANAGER_LOCKER=$DOTFILE_MANAGER_DIR/locker
+
+function setup_origin_remote() {
+  finished=false
+  count=0
+  while ! $finished; do
+    if [ $count -eq 0 ]; then
+      count=1
+      read -p "Would you like add a new git origin remote? (Y/N): " confirm
+    else
+      echo ""
+      read -p "Try again? (Y/N): " confirm
+    fi
+
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+      echo "New git origin (example: git@mygitserver.net/myusernae:myrepo):"
+      read -p "    " newremote
+      echo ""
+      echo "The new origin will be: $newremote"
+      read -p "Is this correct? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] && finished=true
+      
+      git remote add origin $newremote
+    else
+      finished=true
+    fi
+  done
+}
+
+cd $DOTFILE_MANAGER_DIR
+
+echo "Renaming git remote \"origin\" to \"upstream\""
+{
+  git remote rename origin upstream
+} &> /dev/null
+
+setup_origin_remote
+
+echo "Creating $DOTFILE_MANAGER_LOCKFILE"
+touch $DOTFILE_MANAGER_LOCKFILE
+
+echo "Creating $DOTFILE_MANAGER_LOCKER"
+mkdir -p $DOTFILE_MANAGER_LOCKER
+
+echo "Adding dotfile_manager command to /usr/local/bin"
+ln -s ${DOTFILE_MANAGER_BIN_DIR}/run /usr/local/bin/dotfile_manager
