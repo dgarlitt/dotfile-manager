@@ -65,17 +65,18 @@ function restore() {
 }
 
 function usage() {
-  echo "Usage: run [-b] [-i] [-s] [-h]"
+  local script_name=`basename "$0"`
+  echo "Usage: ${script_name} [-b] [-r] [-h]"
   echo ""
   echo "Backup dot files listed in the .lockfile:"
-  echo "    ./run -b"
+  echo "    ${script_name} -b"
   echo ""
   echo "Restore backed up dot files listed in .lockfile"
   echo "into user's \$HOME directory:"
-  echo "    ./run -r"
+  echo "    ${script_name} -r"
   echo ""
   echo "This usage message:"
-  echo "    ./run -h"
+  echo "    ${script_name} -h"
   exit 1;
 }
 
