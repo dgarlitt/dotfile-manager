@@ -26,6 +26,19 @@ DOTFILE_MANAGER_DIR=${CURRENT_DIR%/bin}
 DOTFILE_MANAGER_LOCKFILE=$DOTFILE_MANAGER_DIR/.lockfile
 DOTFILE_MANAGER_LOCKER=$DOTFILE_MANAGER_DIR/locker
 
+function confirm() {
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
 
 function copy_file_or_directory {
   local dotfile=$1
@@ -55,9 +68,34 @@ function read_lockfile() {
   done < $DOTFILE_MANAGER_LOCKFILE
 }
 
+function cleanup_locker() {
+  # Prompt to remove files/directories from the locker
+  # that are no longer in the lockfile.
+  local lockfile_arr=()
+  while read dotfile || [ -n "$dotfile" ]; do
+    if [ ! -z "$dotfile" ]; then
+      lockfile_arr+=("$dotfile")
+    fi
+  done < $DOTFILE_MANAGER_LOCKFILE
+  
+  local dir="${DOTFILE_MANAGER_LOCKER}/.*"
+
+  for filename in $dir; do
+    local base_name=`basename "$filename"`
+    if [ "${base_name}" != "." ] && [ "${base_name}" != ".." ]; then
+      if ! [[ "${lockfile_arr[*]}" =~ (^|[^[:alpha:]])$base_name([^[:alpha:]]|$) ]]; then
+        echo ""
+        local conf_msg="\"${base_name}\" is no longer in the lockfile, do you wish to delete it from the locker? [y/N]"
+        confirm "${conf_msg}" && echo "Deleting ${filename}" && rm -rf ${filename}
+      fi
+    fi
+  done
+}
+
 function backup() {
   rm -rf $DOTFILE_MANAGER_LOCKER/*
   read_lockfile "Backing up" $HOME $DOTFILE_MANAGER_LOCKER
+  cleanup_locker
 }
 
 function restore() {
