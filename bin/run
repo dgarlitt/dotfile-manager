@@ -46,10 +46,12 @@ function copy_file_or_directory {
   local dest=$3
 
   if [ -d "$source/$dotfile" ]; then
-      cp -R $source/$dotfile $dest/
-    else
-      cp $source/$dotfile $dest/$dotfile
-    fi
+    mkdir -p $dest/$dotfile
+    cp -R $source/$dotfile $dest/
+  else
+    mkdir -p `dirname $dest/$dotfile`
+    cp $source/$dotfile $dest/$dotfile
+  fi
 }
 
 function read_lockfile() {
